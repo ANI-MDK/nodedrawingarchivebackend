@@ -1,103 +1,154 @@
-const pool = require("../../../config/database")
+const db = require("../../../config/db")
 
 module.exports = {
     getAll: (req, res, next) => {
-        if("Y" == global.user_info[0].is_admin) {
-            pool.getConnection((err, connection) => {
+        if("Y" === global.user_info[0].is_admin) {
+            const sql = "SELECT id AS project_id, name AS project_name, code AS project_code, location AS project_location, state AS project_state, description AS project_description, is_active AS project_is_active FROM tbl_projects ORDER BY id DESC"
+            db.query(sql, (err, project_list) => {
                 if(err) {
                     next(err)
                 }
-                connection.query("SELECT p.id AS project_id, p.name AS project_name, p.description AS project_description, p.code AS project_code, p.is_active AS project_is_active, p.location_id AS location_id, l.name AS location_name FROM tbl_projects p LEFT JOIN tbl_mst_location l ON p.location_id=l.id", (err, project_list) => {
-                    connection.release()
-                    if(err) {
-                        next(err)
-                    }
-                    res.json({status:'success', message:'Project list', data:project_list})
-                })
+                else {
+                    res.json({status: "success", message: "Project list", data: project_list})
+                }
             })
         }
         else {
-            res.json({status:'error', message:'Permission denied'})
+            res.json({status: "error", message: "Permission denied"})
+        }
+    },
+
+    getAllActiveProjectUserWise: (req, res, next) => {
+        const pageName = req.params.page_name.trim()
+        if("can_add" === pageName || "can_edit" === pageName) {
+            let sql = ""
+            if("Y" === global.user_info[0].is_admin) {
+                sql = "SELECT id AS project_id, name AS project_name, code AS project_code FROM tbl_projects WHERE is_active='Y'"
+            }
+            else {
+                const userId = global.user_info[0].id
+                sql = "SELECT p.id AS project_id, p.name AS project_name, p.code AS project_code FROM tbl_projects p JOIN tbl_user_project_mapping upm ON p.id = upm.project_id WHERE upm.user_id="+db.escape(userId)+" AND upm."+pageName+"='Y' AND p.is_active='Y'"
+            }
+            db.query(sql, (err, projectList) => {
+                if(err) {
+                    next(err)
+                }
+                else {
+                    res.json({status: "success", message: "Active project list", data: projectList})
+                }
+            })
+        }
+        else {
+            res.json({status: "error", message: "Something went wrong"})
         }
     },
 
     create: (req, res, next) => {
         if("Y" == global.user_info[0].is_admin) {
-            pool.getConnection((err, connection) => {
-                if(err) {
-                    next(err)
-                }
-                connection.query("SELECT COUNT(*) AS project_count FROM tbl_projects WHERE name="+connection.escape(req.body.project_name)+" OR code="+connection.escape(req.body.project_code), (err, isExist) => {
+            let projectName = req.body.project_name.trim()
+            let projectCode = req.body.project_code.trim()
+            let projectLocation = req.body.project_location.trim()
+            let projectState = req.body.project_state.trim()
+            let projectDescription = req.body.project_description.trim()
+            if("" !== projectName && "" !== projectCode && "" !== projectLocation && "" !== projectState) {
+                db.query("SELECT COUNT(*) AS project_count FROM tbl_projects WHERE name="+db.escape(projectName)+" OR code="+db.escape(projectCode), (err, isExist) => {
                     if(err) {
-                        connection.release()
                         next(err)
                     }
-                    else if(isExist[0].project_count) {
-                        connection.release()
-                        res.json({status:'error', message:'Project already exist'})
+                    else if(isExist[0].project_count > 0) {
+                        res.json({status: "error", message: "Project already exist"})
                     }
-                    else if(req.body.location_id > 0 && req.body.project_name != "" && req.body.project_code != "") {
-                        connection.query("INSERT INTO tbl_projects SET location_id="+connection.escape(req.body.location_id)+", name="+connection.escape(req.body.project_name)+", description="+connection.escape(req.body.project_description)+", code="+connection.escape(req.body.project_code), (err, projectInfo) => {
-                            connection.release()
+                    else {
+                        db.query("INSERT INTO tbl_projects SET name="+db.escape(projectName)+", code="+db.escape(projectCode)+", location="+db.escape(projectLocation)+", state="+db.escape(projectState)+", description="+db.escape(projectDescription), (err, projectInfo) => {
                             if(err) {
                                 next(err)
                             }
-                            if(projectInfo.insertId) {
-                                res.json({status:'success', message:'Project successfully created'})
+                            else if(projectInfo.insertId > 0) {
+                                res.json({status: "success", message: "Project successfully created"})
                             }
                             else {
-                                res.json({status:'error', message:'Project not created'})
+                                res.json({status: "error", message: "Something went wrong"})
                             }
                         })
                     }
-                    else {
-                        res.json({status:'error', message:'Mandatory field error'})
-                    }
                 })
-            })
+            }
+            else {
+                res.json({status: "error", message: "Mandetory field error"})
+            }
         }
         else {
-            res.json({status:'error', message:'Permission denied'})
+            res.json({status: "error", message: "Permission denied"})
         }
     },
 
     update: (req, res, next) => {
         if("Y" == global.user_info[0].is_admin) {
-            pool.getConnection((err, connection) => {
-                if(err) {
-                    next(err)
+            let projectId = req.params.project_id
+            let projectName = req.body.project_name.trim()
+            let projectCode = req.body.project_code.trim()
+            let projectLocation = req.body.project_location.trim()
+            let projectState = req.body.project_state.trim()
+            let projectDescription = req.body.project_description.trim()
+            if(projectId > 0) {
+                if("" !== projectName && "" !== projectCode && "" !== projectLocation && "" !== projectState) {
+                    db.query("SELECT COUNT(*) AS project_count FROM tbl_projects WHERE id!="+db.escape(projectId)+" AND (name="+db.escape(projectName)+" OR code="+db.escape(projectCode)+")", (err, isExist) => {
+                        if(err) {
+                            next(err)
+                        }
+                        else if(isExist[0].project_count > 0) {
+                            res.json({status: "error", message: "Project already exist"})
+                        }
+                        else {
+                            db.query("UPDATE tbl_projects SET name="+db.escape(projectName)+", code="+db.escape(projectCode)+", location="+db.escape(projectLocation)+", state="+db.escape(projectState)+", description="+db.escape(projectDescription)+" WHERE id="+db.escape(projectId), (err, projectInfo) => {
+                                if(err) {
+                                    next(err)
+                                }
+                                else if(projectInfo.affectedRows === 1) {
+                                    res.json({status: "success", message: "Project successfully updated"})
+                                }
+                                else {
+                                    res.json({status: "error", message: "Something went wrong. Project not updated"})
+                                }
+                            })
+                        }
+                    })
                 }
-                connection.query("SELECT COUNT(*) AS project_count FROM tbl_projects WHERE id!="+connection.escape(req.params.project_id)+" AND (name="+connection.escape(req.body.project_name)+" OR code="+connection.escape(req.body.project_code)+")", (err, isExist) => {
-                    if(err) {
-                        connection.release()
-                        next(err)
-                    }
-                    else if(isExist[0].project_count) {
-                        connection.release()
-                        res.json({status:"error", message:"Project already exist"})
-                    }
-                    else if(req.body.location_id > 0 && req.body.project_name != "" && req.body.project_code != "" && (req.body.project_is_active == "N" || req.body.project_is_active == "Y")) {
-                        connection.query("UPDATE tbl_projects SET location_id="+connection.escape(req.body.location_id)+", name="+connection.escape(req.body.project_name)+", description="+connection.escape(req.body.project_description)+", code="+connection.escape(req.body.project_code)+", is_active="+connection.escape(req.body.project_is_active)+" WHERE id="+connection.escape(req.params.project_id), (err, projectInfo) => {
-                            connection.release()
-                            if(err) {
-                                next(err)
-                            }
-                            if(projectInfo.affectedRows) {
-                                res.json({status:"success", message:"Project successfully updated"})
-                            }
-                            else {
-                                res.json({status:'error', message:'Project not updated'})
-                            }
-                        })
-                    }
-                    else {
-                        res.json({status:'error', message:'Mandatory field error'})
-                    }
-                })
-            })
+                else {
+                    res.json({status: "error", message: "Mandetory field error"})
+                }
+            }
+            else {
+                res.json({status: "error", message: "Something went wrong"})
+            }
         }
         else {
-            res.json({status:'error', message:'Permission denied'})
+            res.json({status: "error", message: "Permission denied"})
+        }
+    },
+
+    changeStatus: (req, res, next) => {
+        if("Y" == global.user_info[0].is_admin) {
+            let projectId = req.params.project_id
+            if(projectId > 0) {
+                db.query("UPDATE tbl_projects SET is_active=CASE WHEN is_active='Y' THEN 'N' WHEN is_active='N' THEN 'Y' END WHERE is_active IN ('Y','N') AND id="+db.escape(projectId), (err, projectInfo) => {
+                    if(err) {
+                        next(err)
+                    }
+                    else if(projectInfo.affectedRows === 1) {
+                        res.json({status: "success", message: "Status successfully updated"})
+                    }
+                    else {
+                        res.json({status: "error", message: "Something went wrong. Status not updated"})
+                    }
+                })
+            }
+            else {
+                res.json({status: "error", message: "Something went wrong"})
+            }
+        }
+        else {
+            res.json({status: "error", message: "Permission denied"})
         }
     }
 }
