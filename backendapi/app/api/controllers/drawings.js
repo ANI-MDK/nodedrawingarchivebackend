@@ -4,6 +4,7 @@ const multer        = require("multer")
 const fs            = require("fs")
 const config        = require("../../../config/config") 
 const path          = require("path")
+const { update } = require("./projects")
 
 insertDrawing = (req, res, next) => {
     const userId = global.user_info[0].id
@@ -31,6 +32,15 @@ insertDrawing = (req, res, next) => {
                 next(err)
             }
             else if(isExist[0].drawing_count > 0) {
+                if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                }
+                if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                }
+                if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                }
                 res.json({status: "error", message: "Drawing already exist"})
             }
             else {
@@ -50,13 +60,13 @@ insertDrawing = (req, res, next) => {
                     else if(drawingInfo.insertId > 0) {
                         const drawingIdCreated = drawingInfo.insertId
                         if(req.files.image_file && req.files.image_file.length > 0) {
-                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.image_file[0].originalname).substring(1).toUpperCase())+", original_file_name="+db.escape(req.files.image_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.image_file[0].filename))
+                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.image_file[0].originalname).substring(1).toUpperCase())+", file_category='IMAGE', original_file_name="+db.escape(req.files.image_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.image_file[0].filename))
                         }
                         if(req.files.pdf_file && req.files.pdf_file.length > 0) {
-                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.pdf_file[0].originalname).substring(1).toUpperCase())+", original_file_name="+db.escape(req.files.pdf_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.pdf_file[0].filename))
+                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.pdf_file[0].originalname).substring(1).toUpperCase())+", file_category='PDF', original_file_name="+db.escape(req.files.pdf_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.pdf_file[0].filename))
                         }
                         if(req.files.drawing_file && req.files.drawing_file.length > 0) {
-                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.drawing_file[0].originalname).substring(1).toUpperCase())+", original_file_name="+db.escape(req.files.drawing_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.drawing_file[0].filename))
+                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingIdCreated)+", file_type="+db.escape(path.extname(req.files.drawing_file[0].originalname).substring(1).toUpperCase())+", file_category='DRAWING', original_file_name="+db.escape(req.files.drawing_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.drawing_file[0].filename))
                         }
                         res.json({status: "success", message: "Drawing successfully created"})
                     }
@@ -77,7 +87,144 @@ insertDrawing = (req, res, next) => {
         })
     }
     else {
+        if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+        }
+        if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+        }
+        if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+        }
         res.json({status: "error", message: "Mandetory field error"})
+    }
+}
+
+updateDrawing = (req, res, next) => {
+    const drawingId = req.params.drawing_id
+    const oldImageId = req.body.old_image_id 
+    const oldPdfId = req.body.old_pdf_id 
+    const oldDrawingId = req.body.old_drawing_id 
+    if(drawingId > 0 || oldImageId > 0 || oldPdfId > 0 || oldDrawingId > 0) {
+        const userId = global.user_info[0].id 
+        const projectId = req.body.project_id
+        const categoryId = req.body.category_id
+        const subCategoryId = req.body.sub_category_id || 0
+        const drawingDescription = req.body.drawing_description.trim()
+        const drawingNumber = req.body.drawing_number.trim()
+        const drawingPassDate = req.body.drawing_pass_date || null
+        const drawingRevision = req.body.drawing_revision.trim() || 0
+        const drawingRevisionDate = req.body.drawing_revision_date || null
+        if(projectId > 0 && categoryId > 0 && drawingDescription !== "" && drawingNumber !== "" && ((drawingRevision !== "" || drawingRevision !== "0") && drawingRevisionDate !== "")) {
+            db.query("SELECT COUNT(*) AS drawing_count FROM tbl_drawings WHERE id!="+db.escape(drawingId)+" AND project_id="+db.escape(projectId)+" AND drg_number="+db.escape(drawingNumber)+" AND revision="+db.escape(drawingRevision)+" AND is_delete='N'", (err, isExist) => {
+                if(err) {
+                    if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                    }
+                    if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                    }
+                    if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                    }
+                    res.json({status: "error", message: "Something went wrong. Error uploading files"})
+                    next(err)
+                }
+                else if(isExist[0].drawing_count > 0) {
+                    if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                    }
+                    if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                    }
+                    if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                        fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                    }
+                    res.json({status: "error", message: "Drawing already exist"})
+                }
+                else {
+                    db.query("UPDATE tbl_drawings SET project_id="+db.escape(projectId)+", category_id="+db.escape(categoryId)+", sub_category_id="+db.escape(subCategoryId)+", description="+db.escape(drawingDescription)+", drg_number="+db.escape(drawingNumber)+", passed_date="+db.escape(drawingPassDate)+", revision="+db.escape(drawingRevision)+", revision_date="+db.escape(drawingRevisionDate)+", updated_by="+db.escape(userId)+", updated_on=now() WHERE id="+db.escape(drawingId), (err, drawingInfo) => {
+                        if(err) {
+                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                            }
+                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                            }
+                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                            }
+                            next(err)
+                        }
+                        else if(drawingInfo.affectedRows === 1) {
+                            if(req.files.image_file && req.files.image_file.length > 0) {
+                                if(oldImageId > 0) {
+                                    db.query("SELECT uploaded_file_name FROM tbl_drawing_docs WHERE id="+db.escape(oldImageId)+" AND drawing_id="+db.escape(drawingId)+" AND file_category='IMAGE'", (err, oldImageInfo) => {
+                                        if(err) {
+                                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                                            }
+                                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                                            }
+                                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                                            }
+                                            next(err)
+                                        }
+                                        else if(oldImageInfo.length) {
+                                            fs.unlinkSync(config.UPLOAD_FILES_DIR+oldImageInfo[0].uploaded_file_name)
+                                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.image_file[0].originalname).substring(1).toUpperCase())+", file_category='IMAGE', original_file_name="+db.escape(req.files.image_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.image_file[0].filename))
+                                        }
+                                    })
+                                }
+                                else {
+                                    db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.image_file[0].originalname).substring(1).toUpperCase())+", file_category='IMAGE', original_file_name="+db.escape(req.files.image_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.image_file[0].filename))
+                                }
+                            }
+                            // Same for pdf
+                            // Same for dwg
+                        }
+                        else {
+                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                            }
+                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                            }
+                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                            }
+                            res.json({status: "error", message: "Something went wrong. Drawing not updated"})
+                        }
+                    })
+                }
+            })
+        }
+        else {
+            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+            }
+            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+            }
+            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+            }
+            res.json({status: "error", message: "Mandetory field error"})
+        }
+    }
+    else {
+        if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+        }
+        if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+        }
+        if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+            fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+        }
+        res.json({status: "error", message: "Something went wrong"})
     }
 }
 
@@ -85,7 +232,7 @@ module.exports = {
     getAll: (req, res, next) => {
         let sql = ""
         if("Y" === global.user_info[0].is_admin) {
-            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, DATE_FORMAT(d.passed_date, '%d %b, %Y') AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active"
+            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.passed_date AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active"
         }
         else {
             const userId = global.user_info[0].id
@@ -157,6 +304,88 @@ module.exports = {
                             insertDrawing(req, res, next)
                         }
                         else {
+                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                            }
+                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                            }
+                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                            }
+                            res.json({status: "error", message: "Permission denied"})
+                        }
+                    })
+                }
+            }
+        })
+    },
+
+    update: (req, res, next) => {
+        uploadFiles.fields([
+            { name: 'image_file', maxCount: 1 },
+            { name: 'pdf_file', maxCount: 1 },
+            { name: 'drawing_file', maxCount: 1 }
+        ])(req, res, (err) => {
+            if (err instanceof multer.MulterError) {
+                if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                }
+                if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                }
+                if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                }
+                res.json({status: "error", message: "Something went wrong. Error uploading files"})
+                next(err)
+            }
+            else if(err) {
+                if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                }
+                if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                }
+                if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                    fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                }
+                res.json({status: "error", message: "Something went wrong. Error uploading files"})
+                next(err)
+            }
+            else {
+                if("Y" === global.user_info[0].is_admin) {
+                    updateDrawing(req, res, next)
+                }
+                else {
+                    const userId = global.user_info[0].id
+                    const projectId = req.body.project_id || 0
+                    db.query("SELECT can_edit FROM tbl_user_project_mapping WHERE user_id="+db.escape(userId)+" AND project_id="+db.escape(projectId), (err, permissionInfo) => {
+                        if(err) {
+                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                            }
+                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                            }
+                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                            }
+                            next(err)
+                        }
+                        else if("Y" === permissionInfo[0].can_edit) {
+                            updateDrawing(req, res, next)
+                        }
+                        else {
+                            if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
+                            }
+                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                            }
+                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                            }
                             res.json({status: "error", message: "Permission denied"})
                         }
                     })
@@ -199,7 +428,21 @@ module.exports = {
                         next(err)
                     }
                     else if(drawingInfo.affectedRows === 1) {
-                        res.json({status: "success", message: "Drawing successfully deleted"})
+                        db.query("SELECT id, uploaded_file_name FROM tbl_drawing_docs WHERE drawing_id="+db.escape(drawingId), (err, drawingDetailsInfo) => {
+                            if(err) {
+                                db.execute("UPDATE tbl_drawings SET is_delete='N' WHERE id="+db.escape(drawingId))
+                                next(err)
+                            }
+                            else {
+                                console.log(drawingDetailsInfo)
+                                drawingDetailsInfo.map((objDd) => {
+                                    // console.log(objDd.id+" => "+config.UPLOAD_FILES_DIR+objDd.uploaded_file_name)
+                                    fs.unlinkSync(config.UPLOAD_FILES_DIR+objDd.uploaded_file_name)
+                                })
+                                db.execute("DELETE FROM tbl_drawing_docs WHERE drawing_id="+db.escape(drawingId))
+                                res.json({status: "success", message: "Drawing successfully deleted"})
+                            }
+                        })
                     }
                     else {
                         res.json({status: "error", message: "Something went wrong. Drawing not deleted"})
