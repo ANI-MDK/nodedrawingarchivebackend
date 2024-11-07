@@ -105,7 +105,7 @@ updateDrawing = (req, res, next) => {
     const oldImageId = req.body.old_image_id 
     const oldPdfId = req.body.old_pdf_id 
     const oldDrawingId = req.body.old_drawing_id 
-    if(drawingId > 0 || oldImageId > 0 || oldPdfId > 0 || oldDrawingId > 0) {
+    if(drawingId > 0 && (oldImageId > 0 || oldPdfId > 0 || oldDrawingId > 0)) {
         const userId = global.user_info[0].id 
         const projectId = req.body.project_id
         const categoryId = req.body.category_id
@@ -164,12 +164,6 @@ updateDrawing = (req, res, next) => {
                                             if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                                                 fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
                                             }
-                                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
-                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
-                                            }
-                                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
-                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
-                                            }
                                             next(err)
                                         }
                                         else if(oldImageInfo.length) {
@@ -182,8 +176,44 @@ updateDrawing = (req, res, next) => {
                                     db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.image_file[0].originalname).substring(1).toUpperCase())+", file_category='IMAGE', original_file_name="+db.escape(req.files.image_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.image_file[0].filename))
                                 }
                             }
-                            // Same for pdf
-                            // Same for dwg
+                            if(req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                if(oldPdfId > 0) {
+                                    db.query("SELECT uploaded_file_name FROM tbl_drawing_docs WHERE id="+db.escape(oldPdfId)+" AND drawing_id="+db.escape(drawingId)+" AND file_category='PDF'", (err, oldPdfInfo) => {
+                                        if(err) {
+                                            if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
+                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.pdf_file[0].filename)
+                                            }
+                                            next(err)
+                                        }
+                                        else if(oldPdfInfo.length) {
+                                            fs.unlinkSync(config.UPLOAD_FILES_DIR+oldPdfInfo[0].uploaded_file_name)
+                                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.pdf_file[0].originalname).substring(1).toUpperCase())+", file_category='PDF', original_file_name="+db.escape(req.files.pdf_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.pdf_file[0].filename))
+                                        }
+                                    })
+                                }
+                                else {
+                                    db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.pdf_file[0].originalname).substring(1).toUpperCase())+", file_category='PDF', original_file_name="+db.escape(req.files.pdf_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.pdf_file[0].filename))
+                                }
+                            }
+                            if(req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                if(oldDrawingId > 0) {
+                                    db.query("SELECT uploaded_file_name FROM tbl_drawing_docs WHERE id="+db.escape(oldDrawingId)+" AND drawing_id="+db.escape(drawingId)+" AND file_category='DRAWING'", (err, oldDrawingInfo) => {
+                                        if(err) {
+                                            if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
+                                                fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
+                                            }
+                                            next(err)
+                                        }
+                                        else if(oldDrawingInfo.length) {
+                                            fs.unlinkSync(config.UPLOAD_FILES_DIR+oldDrawingInfo[0].uploaded_file_name)
+                                            db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.drawing_file[0].originalname).substring(1).toUpperCase())+", file_category='DRAWING', original_file_name="+db.escape(req.files.drawing_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.drawing_file[0].filename))
+                                        }
+                                    })
+                                }
+                                else {
+                                    db.execute("INSERT INTO tbl_drawing_docs SET drawing_id="+db.escape(drawingId)+", file_type="+db.escape(path.extname(req.files.drawing_file[0].originalname).substring(1).toUpperCase())+", file_category='DRAWING', original_file_name="+db.escape(req.files.drawing_file[0].originalname)+", uploaded_file_name="+db.escape(req.files.drawing_file[0].filename))
+                                }
+                            }
                         }
                         else {
                             if(req.files && req.files.image_file && req.files.image_file.length > 0) {
@@ -232,11 +262,11 @@ module.exports = {
     getAll: (req, res, next) => {
         let sql = ""
         if("Y" === global.user_info[0].is_admin) {
-            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.passed_date AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active"
+            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.passed_date AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active"
         }
         else {
             const userId = global.user_info[0].id
-            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.passed_date AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, upm.can_edit AS drawing_can_edit, upm.can_download AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id JOIN tbl_user_project_mapping upm ON p.id=upm.project_id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_active='Y' AND d.is_delete='N' AND upm.user_id="+db.escape(userId)+" AND upm.can_view='Y' AND p.is_active='Y' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active, upm.can_edit, upm.can_download"
+            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.passed_date AS drawing_passed_date, d.revision AS drawing_revision_number, d.revision_date AS drawing_revision_date, d.is_active AS drawing_is_active, upm.can_edit AS drawing_can_edit, upm.can_download AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id JOIN tbl_user_project_mapping upm ON p.id=upm.project_id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_active='Y' AND d.is_delete='N' AND upm.user_id="+db.escape(userId)+" AND upm.can_view='Y' AND p.is_active='Y' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active, upm.can_edit, upm.can_download"
         }
         db.query(sql, (err, drawingList) => {
             if(err) {
