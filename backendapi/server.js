@@ -17,8 +17,8 @@ global.user_info = null
 const app   = express()
 
 app.use(cors({
-    origin: ["http://192.168.1.81:4000","http://192.168.1.128:4000"],
-    exposedHeaders: ["Authorization"],
+    origin: ["http://192.168.1.81:4000","http://192.168.1.128:4000","http://192.168.1.127:4000"],
+    exposedHeaders: ["Authorization","Content-Type","Content-Disposition"],
     credentials: true,
     methods: ["GET","POST","PUT"]
 }))
@@ -29,7 +29,7 @@ app.use(bodyParser.urlencoded({
     extended: true
 }))
 
-// app.use('/uploads', express.static('uploads'))
+app.use('/uploads', express.static('uploads'))
 
 const PORT  = config.PORT || 3000
 const ENV   = config.ENV
