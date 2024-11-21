@@ -1,8 +1,8 @@
+const request   = require("request")
 const db        = require("../../../config/db")
 const bcrypt    = require("bcrypt")
 const jwt       = require("jsonwebtoken")
 const config    = require("../../../config/config")
-const request   = require("request")
 
 module.exports = {
     authenticate: (req, res, next) => {

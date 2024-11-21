@@ -28,7 +28,7 @@ insertDrawing = (req, res, next) => {
                 if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
                 }
-                res.json({status: "error", message: "Something went wrong. Error uploading files"})
+                // res.json({status: "error", message: "Something went wrong. Error uploading files"})
                 next(err)
             }
             else if(isExist[0].drawing_count > 0) {
@@ -133,7 +133,7 @@ updateDrawing = (req, res, next) => {
                     if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
                         fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
                     }
-                    res.json({status: "error", message: "Something went wrong. Error uploading files"})
+                    // res.json({status: "error", message: "Something went wrong. Error uploading files"})
                     next(err)
                 }
                 else if(isExist[0].drawing_count > 0) {
@@ -454,7 +454,7 @@ module.exports = {
             { name: 'drawing_file', maxCount: 1 }
         ])(req, res, (err) => {
             if (err instanceof multer.MulterError) {
-                if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                /*if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
                 }
                 if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
@@ -462,7 +462,7 @@ module.exports = {
                 }
                 if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
-                }
+                }*/
                 // res.json({status: "error", message: "Something went wrong. Error uploading files"})
                 next(err)
             }
@@ -527,7 +527,7 @@ module.exports = {
             { name: 'drawing_file', maxCount: 1 }
         ])(req, res, (err) => {
             if (err instanceof multer.MulterError) {
-                if(req.files && req.files.image_file && req.files.image_file.length > 0) {
+                /*if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
                 }
                 if(req.files && req.files.pdf_file && req.files.pdf_file.length > 0) {
@@ -535,7 +535,7 @@ module.exports = {
                 }
                 if(req.files && req.files.drawing_file && req.files.drawing_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.drawing_file[0].filename)
-                }
+                }*/
                 // res.json({status: "error", message: "Something went wrong. Error uploading files"})
                 next(err)
             }
