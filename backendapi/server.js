@@ -11,6 +11,7 @@ const category      = require("./routes/categories")
 const role          = require("./routes/roles")
 const user          = require("./routes/users")
 const drawing       = require("./routes/drawings")
+const report        = require("./routes/reports")
 
 global.user_info = null
 
@@ -53,6 +54,8 @@ app.use("/role", verify.tokenAuth, role)
 app.use("/user", verify.tokenAuth, user)
 
 app.use("/drawing", verify.tokenAuth, drawing)
+
+app.use("/report", verify.tokenAuth, report)
 
 app.use((err, req, res, next) => {
     const logErrorMessage = `

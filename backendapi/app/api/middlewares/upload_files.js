@@ -27,7 +27,7 @@ const uploadFiles = multer({
         if(allowedMimetypes.includes(file.mimetype) || (file.mimetype === "application/octet-stream" && ext === ".dwg")) {
             cb(null, true)
         }
-        else{
+        else {
             cb(null, false)
             return cb(new Error("Invalid file type. Only JPG, JPEG, PNG, PDF, and DWG are allowed"))
         }

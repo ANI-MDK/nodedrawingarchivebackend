@@ -453,7 +453,7 @@ module.exports = {
             { name: 'pdf_file', maxCount: 1 },
             { name: 'drawing_file', maxCount: 1 }
         ])(req, res, (err) => {
-            if (err instanceof multer.MulterError) {
+            if(err instanceof multer.MulterError) {
                 /*if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
                 }

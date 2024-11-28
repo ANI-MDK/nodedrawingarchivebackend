@@ -189,7 +189,7 @@ module.exports = {
         if("Y" == global.user_info[0].is_admin) {
             const userId = req.params.user_id
             if(userId > 0) {
-                const sql = "SELECT p.id AS project_id, p.name AS project_name, COALESCE(upm.can_view, 'N') AS can_view, COALESCE(upm.can_add, 'N') AS can_add, COALESCE(upm.can_edit, 'N') AS can_edit, COALESCE(upm.can_download, 'N') AS can_download FROM tbl_projects p LEFT JOIN tbl_user_project_mapping upm ON p.id = upm.project_id AND upm.user_id = "+db.escape(userId)+" WHERE p.is_active = 'Y' ORDER BY p.name ASC"
+                const sql = "SELECT p.id AS project_id, p.name AS project_name, COALESCE(upm.can_view, 'N') AS can_view, COALESCE(upm.can_add, 'N') AS can_add, COALESCE(upm.can_edit, 'N') AS can_edit, COALESCE(upm.can_download, 'N') AS can_download, COALESCE(upm.can_view_download_logsheet, 'N') AS can_view_download_logsheet FROM tbl_projects p LEFT JOIN tbl_user_project_mapping upm ON p.id = upm.project_id AND upm.user_id = "+db.escape(userId)+" WHERE p.is_active = 'Y' ORDER BY p.name ASC"
                 db.query(sql, (err, userPermissionList) => {
                     if(err) {
                         next(err)

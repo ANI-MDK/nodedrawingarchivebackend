@@ -15,7 +15,7 @@ module.exports = {
             const verificationURL = "https://www.google.com/recaptcha/api/siteverify?secret="+secretKey+"&response="+token
             request(verificationURL, (err, verificationInfo) => {
                 const { success, score } = JSON.parse(verificationInfo.body)
-                if(!success || score < 0.7) {
+                if(!success && score < 0.7) {
                     res.json({status: "error", message: "Auth failed. Login unavailable"})
                 }
                 else {
@@ -34,10 +34,10 @@ module.exports = {
                                 else if(bcrypt.compareSync(userPassword, userInfo.user_password)) {
                                     let sql = ""
                                     if("N" == userInfo.is_admin_user) {
-                                        sql = "SELECT COUNT(*) AS total_count, COUNT(CASE WHEN m.can_add = 'Y' THEN 1 END) AS can_add_drawing FROM tbl_projects p INNER JOIN tbl_user_project_mapping m ON p.id=m.project_id WHERE m.user_id="+db.escape(userInfo.user_id)+" AND p.is_active='Y'"
+                                        sql = "SELECT COUNT(*) AS total_count, COUNT(CASE WHEN m.can_add = 'Y' THEN 1 END) AS can_add_drawing, COUNT(CASE WHEN m.can_view_download_logsheet = 'Y' THEN 1 END) AS can_view_download_logsheet FROM tbl_projects p INNER JOIN tbl_user_project_mapping m ON p.id=m.project_id WHERE m.user_id="+db.escape(userInfo.user_id)+" AND p.is_active='Y'"
                                     }
                                     else {
-                                        sql = "SELECT COUNT(*) AS total_count, 1 AS can_add_drawing FROM tbl_projects WHERE is_active='Y'"
+                                        sql = "SELECT COUNT(*) AS total_count, 1 AS can_add_drawing, 1 AS can_view_download_logsheet FROM tbl_projects WHERE is_active='Y'"
                                     }
                                     db.query(sql, (err, associatedProjectInfo) => {
                                         if(err) {
@@ -56,7 +56,8 @@ module.exports = {
                                                     user_email: userInfo.user_email,
                                                     is_admin_user: userInfo.is_admin_user,
                                                     user_role_name: ("N" == userInfo.is_admin_user) ? userInfo.user_role_name : "Admin",
-                                                    can_add_drawing: associatedProjectInfo[0].can_add_drawing
+                                                    can_add_drawing: associatedProjectInfo[0].can_add_drawing,
+                                                    can_view_download_logsheet: associatedProjectInfo[0].can_view_download_logsheet
                                                 }
                                             })
                                         }
