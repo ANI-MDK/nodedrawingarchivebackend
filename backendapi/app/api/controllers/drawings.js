@@ -10,14 +10,15 @@ insertDrawing = (req, res, next) => {
     const projectId = req.body.project_id
     const categoryId = req.body.category_id
     const subCategoryId = req.body.sub_category_id || 0
+    const drawingType = req.body.drawing_type.trim()
     const drawingDescription = req.body.drawing_description.trim()
     const drawingNumber = req.body.drawing_number.trim()
     const drawingPageNumber = req.body.drawing_page.trim() || 0
     const drawingPassDate = req.body.drawing_pass_date || null
     const drawingRevision = req.body.drawing_revision.trim() || 0
     const drawingRevisionDate = req.body.drawing_revision_date || null
-    if(projectId > 0 && categoryId > 0 && drawingDescription !== "" && drawingNumber !== "" && drawingPageNumber > 0 && ((drawingRevision !== "" || drawingRevision !== "0") && drawingRevisionDate !== "") && (req.files || req.files.length !== 0)) {
-        db.query("SELECT COUNT(*) AS drawing_count FROM tbl_drawings WHERE project_id="+db.escape(projectId)+" AND drg_number="+db.escape(drawingNumber)+" AND page_number="+db.escape(drawingPageNumber)+" AND revision="+db.escape(drawingRevision)+" AND is_delete='N'", (err, isExist) => {
+    if(projectId > 0 && categoryId > 0 && (drawingType === "GA" || drawingType === "Detail") && drawingDescription !== "" && drawingNumber !== "" && drawingPageNumber > 0 && ((drawingRevision !== "" || drawingRevision !== "0") && drawingRevisionDate !== "") && (req.files || req.files.length !== 0)) {
+        db.query("SELECT COUNT(*) AS drawing_count FROM tbl_drawings WHERE project_id="+db.escape(projectId)+" AND category_id="+db.escape(categoryId)+" AND drawing_type="+db.escape(drawingType)+" AND drg_number="+db.escape(drawingNumber)+" AND page_number="+db.escape(drawingPageNumber)+" AND revision="+db.escape(drawingRevision)+" AND is_delete='N'", (err, isExist) => {
             if(err) {
                 if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                     fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
@@ -44,7 +45,7 @@ insertDrawing = (req, res, next) => {
                 res.json({status: "error", message: "Drawing already exist"})
             }
             else {
-                db.query("INSERT INTO tbl_drawings SET project_id="+db.escape(projectId)+", category_id="+db.escape(categoryId)+", sub_category_id="+db.escape(subCategoryId)+", description="+db.escape(drawingDescription)+", drg_number="+db.escape(drawingNumber)+", page_number="+db.escape(drawingPageNumber)+", passed_date="+db.escape(drawingPassDate)+", revision="+db.escape(drawingRevision)+", revision_date="+db.escape(drawingRevisionDate)+", added_by="+db.escape(userId), (err, drawingInfo) => {
+                db.query("INSERT INTO tbl_drawings SET project_id="+db.escape(projectId)+", category_id="+db.escape(categoryId)+", sub_category_id="+db.escape(subCategoryId)+", drawing_type="+db.escape(drawingType)+", description="+db.escape(drawingDescription)+", drg_number="+db.escape(drawingNumber)+", page_number="+db.escape(drawingPageNumber)+", passed_date="+db.escape(drawingPassDate)+", revision="+db.escape(drawingRevision)+", revision_date="+db.escape(drawingRevisionDate)+", added_by="+db.escape(userId), (err, drawingInfo) => {
                     if(err) {
                         if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                             fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
@@ -115,14 +116,15 @@ updateDrawing = (req, res, next) => {
         const projectId = req.body.project_id
         const categoryId = req.body.category_id
         const subCategoryId = req.body.sub_category_id || 0
+        const drawingType = req.body.drawing_type.trim()
         const drawingDescription = req.body.drawing_description.trim()
         const drawingNumber = req.body.drawing_number.trim()
         const drawingPageNumber = req.body.drawing_page.trim() || 0
         const drawingPassDate = req.body.drawing_pass_date || null
         const drawingRevision = req.body.drawing_revision.trim() || 0
         const drawingRevisionDate = req.body.drawing_revision_date || null
-        if(projectId > 0 && categoryId > 0 && drawingDescription !== "" && drawingNumber !== "" && drawingPageNumber > 0 && ((drawingRevision !== "" || drawingRevision !== "0") && drawingRevisionDate !== "")) {
-            db.query("SELECT COUNT(*) AS drawing_count FROM tbl_drawings WHERE id!="+db.escape(drawingId)+" AND project_id="+db.escape(projectId)+" AND drg_number="+db.escape(drawingNumber)+" AND page_number="+db.escape(drawingPageNumber)+" AND revision="+db.escape(drawingRevision)+" AND is_delete='N'", (err, isExist) => {
+        if(projectId > 0 && categoryId > 0 && (drawingType === "GA" || drawingType === "Detail") && drawingDescription !== "" && drawingNumber !== "" && drawingPageNumber > 0 && ((drawingRevision !== "" || drawingRevision !== "0") && drawingRevisionDate !== "")) {
+            db.query("SELECT COUNT(*) AS drawing_count FROM tbl_drawings WHERE id!="+db.escape(drawingId)+" AND project_id="+db.escape(projectId)+" AND category_id="+db.escape(categoryId)+" AND drawing_type="+db.escape(drawingType)+" AND drg_number="+db.escape(drawingNumber)+" AND page_number="+db.escape(drawingPageNumber)+" AND revision="+db.escape(drawingRevision)+" AND is_delete='N'", (err, isExist) => {
                 if(err) {
                     if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                         fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
@@ -149,7 +151,7 @@ updateDrawing = (req, res, next) => {
                     res.json({status: "error", message: "Drawing already exist"})
                 }
                 else {
-                    db.query("UPDATE tbl_drawings SET project_id="+db.escape(projectId)+", category_id="+db.escape(categoryId)+", sub_category_id="+db.escape(subCategoryId)+", description="+db.escape(drawingDescription)+", drg_number="+db.escape(drawingNumber)+", page_number="+db.escape(drawingPageNumber)+", passed_date="+db.escape(drawingPassDate)+", revision="+db.escape(drawingRevision)+", revision_date="+db.escape(drawingRevisionDate)+", updated_by="+db.escape(userId)+", updated_on=now() WHERE id="+db.escape(drawingId), (err, drawingInfo) => {
+                    db.query("UPDATE tbl_drawings SET project_id="+db.escape(projectId)+", category_id="+db.escape(categoryId)+", sub_category_id="+db.escape(subCategoryId)+", drawing_type="+db.escape(drawingType)+", description="+db.escape(drawingDescription)+", drg_number="+db.escape(drawingNumber)+", page_number="+db.escape(drawingPageNumber)+", passed_date="+db.escape(drawingPassDate)+", revision="+db.escape(drawingRevision)+", revision_date="+db.escape(drawingRevisionDate)+", updated_by="+db.escape(userId)+", updated_on=now() WHERE id="+db.escape(drawingId), (err, drawingInfo) => {
                         if(err) {
                             if(req.files && req.files.image_file && req.files.image_file.length > 0) {
                                 fs.unlinkSync(config.UPLOAD_FILES_DIR+req.files.image_file[0].filename)
@@ -430,11 +432,11 @@ module.exports = {
     getAll: (req, res, next) => {
         let sql = ""
         if("Y" === global.user_info[0].is_admin) {
-            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.page_number AS page_number, DATE_FORMAT(d.passed_date, '%Y-%m-%d') AS drawing_passed_date, d.revision AS drawing_revision_number, DATE_FORMAT(d.revision_date, '%Y-%m-%d') AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active ORDER BY drawing_id DESC"
+            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.drawing_type AS drawing_type, d.description AS drawing_description, d.drg_number AS drawing_number, d.page_number AS page_number, DATE_FORMAT(d.passed_date, '%Y-%m-%d') AS drawing_passed_date, d.revision AS drawing_revision_number, DATE_FORMAT(d.revision_date, '%Y-%m-%d') AS drawing_revision_date, d.is_active AS drawing_is_active, 'Y' AS drawing_can_edit, 'Y' AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_delete='N' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active ORDER BY drawing_id DESC"
         }
         else {
             const userId = global.user_info[0].id
-            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.description AS drawing_description, d.drg_number AS drawing_number, d.page_number AS page_number, DATE_FORMAT(d.passed_date, '%Y-%m-%d') AS drawing_passed_date, d.revision AS drawing_revision_number, DATE_FORMAT(d.revision_date, '%Y-%m-%d') AS drawing_revision_date, d.is_active AS drawing_is_active, upm.can_edit AS drawing_can_edit, upm.can_download AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id JOIN tbl_user_project_mapping upm ON p.id=upm.project_id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_active='Y' AND d.is_delete='N' AND upm.user_id="+db.escape(userId)+" AND upm.can_view='Y' AND p.is_active='Y' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active, upm.can_edit, upm.can_download ORDER BY drawing_id DESC"
+            sql = "SELECT d.id AS drawing_id, d.project_id AS project_id, p.name AS project_name, p.code AS project_code, d.category_id AS category_id, c.name AS category_name, d.sub_category_id AS sub_category_id, s.name AS sub_category_name, d.drawing_type AS drawing_type, d.description AS drawing_description, d.drg_number AS drawing_number, d.page_number AS page_number, DATE_FORMAT(d.passed_date, '%Y-%m-%d') AS drawing_passed_date, d.revision AS drawing_revision_number, DATE_FORMAT(d.revision_date, '%Y-%m-%d') AS drawing_revision_date, d.is_active AS drawing_is_active, upm.can_edit AS drawing_can_edit, upm.can_download AS drawing_can_download, GROUP_CONCAT(DISTINCT dd.file_type SEPARATOR ', ') AS drawing_file_type, GROUP_CONCAT(DISTINCT CONCAT(dd.id, '|~|', dd.file_type, '|~|', dd.original_file_name) SEPARATOR ', ') AS drawing_file_details FROM tbl_drawings d JOIN tbl_projects p ON d.project_id=p.id JOIN tbl_categories c ON d.category_id=c.id LEFT JOIN tbl_sub_categories s ON d.sub_category_id=s.id JOIN tbl_user_project_mapping upm ON p.id=upm.project_id LEFT JOIN tbl_drawing_docs dd ON d.id=dd.drawing_id WHERE d.is_active='Y' AND d.is_delete='N' AND upm.user_id="+db.escape(userId)+" AND upm.can_view='Y' AND p.is_active='Y' GROUP BY d.id, d.project_id, p.name, p.code, d.category_id, c.name, d.sub_category_id, s.name, d.description, d.drg_number, d.passed_date, d.revision, d.revision_date, d.is_active, upm.can_edit, upm.can_download ORDER BY drawing_id DESC"
         }
         db.query(sql, (err, drawingList) => {
             if(err) {

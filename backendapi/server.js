@@ -6,6 +6,7 @@ const fs            = require("fs")
 const config        = require("./config/config")
 const login         = require("./routes/login")
 const verify        = require("./app/api/middlewares/verification")
+const dashboard     = require("./routes/dashboard")
 const project       = require("./routes/projects")
 const category      = require("./routes/categories")
 const role          = require("./routes/roles")
@@ -44,6 +45,8 @@ app.get("/", (req , res) => {
 })
 
 app.use("/login", login)
+
+app.use("/dashboard", verify.tokenAuth, dashboard)
 
 app.use("/project", verify.tokenAuth, project)
 
