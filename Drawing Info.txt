@@ -1,0 +1,12 @@
+Drawing App Info:
+=================
+URL: http://192.168.1.20/
+
+Admin username: admin@dril.net.in
+Admin password: Admin@Dril
+
+Server: Ubuntu 24.04
+
+Node Version: 18.20.5
+NPM Version: 10.8.2
+Mysql Server version: 8.0.41
